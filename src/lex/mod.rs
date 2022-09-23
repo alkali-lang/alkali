@@ -1,5 +1,5 @@
-mod token;
 mod lexer;
+mod token;
 
-pub use token::{ Token, TokenReader };
 pub use lexer::lex;
+pub use token::{Token, TokenReader};
