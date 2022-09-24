@@ -12,14 +12,13 @@ pub enum Token {
   Percent,
   Caret,
   Ampersand,
-  Space,
-  Newline,
-  String(String),
-  Tab,
+  Identifier(String),
+  Number(String),
   End,
   Semicolon,
   LessThan,
   GreaterThan,
+  Invalid
 }
 
 pub struct TokenReader {
