@@ -1,11 +1,9 @@
 mod lex;
 
-use lex::lex;
+use lex::lex_source;
 
 fn main() {
-    let mut token_reader = lex("input.txt");
+    let token_reader = lex_source("input.txt");
 
-    while !token_reader.end_of_file() {
-        println!("{:?}", token_reader.next_token());
-    }
+   println!("{:?}", token_reader.tokens);
 }

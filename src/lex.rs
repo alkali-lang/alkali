@@ -2,4 +2,4 @@ mod token;
 mod lexer;
 
 pub use token::{ Token, TokenReader };
-pub use lexer::lex;
+pub use lexer::lex_source;
