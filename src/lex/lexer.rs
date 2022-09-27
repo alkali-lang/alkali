@@ -10,9 +10,8 @@ pub fn lex_source(source: &str) -> token::TokenReader {
 		.map(|f| io::BufReader::new(f))
 		.expect(format!("Could not open file {}", source).as_str());
 
-	let test = &mut file.chars().map(|c| c.unwrap());
-
-	let tokens = lex(test);
+	let char_iter = &mut file.chars().map(|c| c.unwrap());
+	let tokens = lex(char_iter);
 	token::TokenReader::new(tokens)
 }
 
