@@ -1,39 +1,139 @@
+use itertools::Itertools;
 use std::fs::File;
+use utf8_chars::BufReadCharsExt;
 
 use super::{token, Token};
-use std::io::{self, BufRead};
+use std::io::{self};
 
-pub fn lex(source: &str) -> token::TokenReader {
-	let mut tokens: Vec<Token> = Vec::new();
-
-	let file = File::open(source)
+pub fn lex_source(source: &str) -> token::TokenReader {
+	let mut file = File::open(source)
 		.map(|f| io::BufReader::new(f))
 		.expect(format!("Could not open file {}", source).as_str());
 
-	for line in file.lines() {
-		let line = line.unwrap();
-		for ch in line.chars() {
-			match ch {
-				'=' => tokens.push(Token::Equals),
-				'+' => tokens.push(Token::Plus),
-				'-' => tokens.push(Token::Minus),
-				'*' => tokens.push(Token::Star),
-				'/' => tokens.push(Token::Slash),
-				'%' => tokens.push(Token::Percent),
-				'^' => tokens.push(Token::Caret),
-				'&' => tokens.push(Token::Ampersand),
-				' ' => tokens.push(Token::Space),
-				'\t' => tokens.push(Token::Tab),
-				'\n' => tokens.push(Token::Newline),
-				';' => tokens.push(Token::Semicolon),
-				'<' => tokens.push(Token::LessThan),
-				'>' => tokens.push(Token::GreaterThan),
-				alpha if alpha.is_alphanumeric() => tokens.push(Token::Alpha(alpha)),
-				_ => tokens.push(Token::String(ch.to_string())),
+	let char_iter = &mut file.chars().map(|c| c.unwrap());
+	let tokens = lex(char_iter);
+	token::TokenReader::new(tokens)
+}
+
+fn lex(iterator: &mut dyn Iterator<Item = char>) -> Vec<Token> {
+	let mut iterator = iterator.peekable();
+	let mut tokens: Vec<Token> = Vec::new();
+	while let Some(char) = iterator.next() {
+		match char {
+			'=' => tokens.push(Token::Equals),
+			'+' => tokens.push(Token::Plus),
+			'-' => tokens.push(Token::Minus),
+			'*' => tokens.push(Token::Star),
+			'/' => tokens.push(Token::Slash),
+			'%' => tokens.push(Token::Percent),
+			'^' => tokens.push(Token::Caret),
+			'&' => tokens.push(Token::Ampersand),
+			';' => tokens.push(Token::Semicolon),
+			'{' => tokens.push(Token::LBrace),
+			'}' => tokens.push(Token::RBrace),
+			'(' => tokens.push(Token::LParen),
+			')' => tokens.push(Token::RParen),
+			'"' => {
+				let string = iterator
+					.by_ref()
+					.take_while(|c| *c != '"')
+					.collect::<String>();
+				tokens.push(Token::StringLiteral(string));
 			}
+			pipe if pipe == '>' && iterator.peek() == Some(&'>') => {
+				iterator.next();
+				tokens.push(Token::Pipe)
+			}
+			'<' => tokens.push(Token::LessThan),
+			'>' => tokens.push(Token::GreaterThan),
+			alpha if alpha.is_alphabetic() => {
+				let mut identifier = alpha.to_string();
+				let res: String =
+					Itertools::peeking_take_while(iterator.by_ref(), |c| c.is_alphanumeric())
+						.collect();
+
+				identifier.push_str(&res);
+				tokens.push(Token::Identifier(identifier));
+			}
+			num if num.is_numeric() => {
+				let number = num.to_digit(10).unwrap();
+				let mut res: Vec<u32> = vec![number];
+
+				Itertools::peeking_take_while(iterator.by_ref(), |c| c.is_numeric())
+					.map(|c| c.to_digit(10).unwrap())
+					.for_each(|c| res.push(c));
+
+				let number = res.into_iter().reduce(|a, b| a * 10 + b).unwrap();
+				tokens.push(Token::NumberLiteral(number.to_owned()));
+			}
+			_ => (),
 		}
 	}
 
 	tokens.push(Token::End);
-	token::TokenReader::new(tokens)
+	tokens
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	fn basic() -> Vec<Token> {
+		vec![
+			Token::Identifier("test".to_string()),
+			Token::Equals,
+			Token::NumberLiteral(1),
+			Token::Plus,
+			Token::NumberLiteral(278),
+			Token::End,
+		]
+	}
+
+	#[test]
+	fn test_basic() {
+		let source = "test = 1 + 278";
+		let tokens = lex(&mut source.chars());
+		assert_eq!(tokens, basic());
+	}
+
+	#[test]
+	fn basic_no_space() {
+		let source = "test=1+278";
+		let tokens = lex(&mut source.chars());
+		assert_eq!(tokens, basic());
+	}
+
+	#[test]
+	fn literals() {
+		let source = "test = \"hello\" + 2";
+		let tokens = lex(&mut source.chars());
+		assert_eq!(
+			tokens,
+			vec![
+				Token::Identifier("test".to_string()),
+				Token::Equals,
+				Token::StringLiteral("hello".to_string()),
+				Token::Plus,
+				Token::NumberLiteral(2),
+				Token::End,
+			]
+		);
+	}
+
+	#[test]
+	fn pipe() {
+		let source = "test = 1 >> 2";
+		let tokens = lex(&mut source.chars());
+		assert_eq!(
+			tokens,
+			vec![
+				Token::Identifier("test".to_string()),
+				Token::Equals,
+				Token::NumberLiteral(1),
+				Token::Pipe,
+				Token::NumberLiteral(2),
+				Token::End,
+			]
+		);
+	}
 }

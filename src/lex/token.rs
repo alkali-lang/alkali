@@ -2,7 +2,6 @@ use std::fmt::Debug;
 
 #[derive(Debug, PartialEq)]
 pub enum Token {
-	Alpha(char),
 	Equals,
 	Plus,
 	Minus,
@@ -11,14 +10,18 @@ pub enum Token {
 	Percent,
 	Caret,
 	Ampersand,
-	Space,
-	Newline,
-	String(String),
-	Tab,
+	Identifier(String),
+	NumberLiteral(u32),
+	StringLiteral(String),
 	End,
 	Semicolon,
 	LessThan,
 	GreaterThan,
+	Pipe,
+	LBrace,
+	RBrace,
+	LParen,
+	RParen,
 }
 
 pub struct TokenReader {
