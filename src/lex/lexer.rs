@@ -30,10 +30,10 @@ fn lex(iterator: &mut dyn Iterator<Item = char>) -> Vec<Token> {
 			'^' => tokens.push(Token::Caret),
 			'&' => tokens.push(Token::Ampersand),
 			';' => tokens.push(Token::Semicolon),
-			'{' => tokens.push(Token::LeftCurlyBrace),
-			'}' => tokens.push(Token::RightCurlyBrace),
-			'(' => tokens.push(Token::LeftParenthesis),
-			')' => tokens.push(Token::RightParenthesis),
+			'{' => tokens.push(Token::LBrace),
+			'}' => tokens.push(Token::RBrace),
+			'(' => tokens.push(Token::LParen),
+			')' => tokens.push(Token::RParen),
 			'"' => {
 				let string = iterator
 					.by_ref()
@@ -57,11 +57,15 @@ fn lex(iterator: &mut dyn Iterator<Item = char>) -> Vec<Token> {
 				tokens.push(Token::Identifier(identifier));
 			}
 			num if num.is_numeric() => {
-				let mut number = num.to_string();
-				let res: String =
-					Itertools::peeking_take_while(iterator.by_ref(), |c| c.is_numeric()).collect();
-				number.push_str(&res);
-				tokens.push(Token::NumberLiteral(number));
+				let number = num.to_digit(10).unwrap();
+				let mut res: Vec<u32> = vec![number];
+
+				Itertools::peeking_take_while(iterator.by_ref(), |c| c.is_numeric())
+					.map(|c| c.to_digit(10).unwrap())
+					.for_each(|c| res.push(c));
+
+				let number = res.into_iter().reduce(|a, b| a * 10 + b).unwrap();
+				tokens.push(Token::NumberLiteral(number.to_owned()));
 			}
 			_ => (),
 		}
@@ -79,23 +83,23 @@ mod tests {
 		vec![
 			Token::Identifier("test".to_string()),
 			Token::Equals,
-			Token::NumberLiteral("1".to_string()),
+			Token::NumberLiteral(1),
 			Token::Plus,
-			Token::NumberLiteral("2".to_string()),
+			Token::NumberLiteral(278),
 			Token::End,
 		]
 	}
 
 	#[test]
 	fn test_basic() {
-		let source = "test = 1 + 2";
+		let source = "test = 1 + 278";
 		let tokens = lex(&mut source.chars());
 		assert_eq!(tokens, basic());
 	}
 
 	#[test]
 	fn basic_no_space() {
-		let source = "test=1+2";
+		let source = "test=1+278";
 		let tokens = lex(&mut source.chars());
 		assert_eq!(tokens, basic());
 	}
@@ -111,7 +115,7 @@ mod tests {
 				Token::Equals,
 				Token::StringLiteral("hello".to_string()),
 				Token::Plus,
-				Token::NumberLiteral("2".to_string()),
+				Token::NumberLiteral(2),
 				Token::End,
 			]
 		);
@@ -126,9 +130,9 @@ mod tests {
 			vec![
 				Token::Identifier("test".to_string()),
 				Token::Equals,
-				Token::NumberLiteral("1".to_string()),
+				Token::NumberLiteral(1),
 				Token::Pipe,
-				Token::NumberLiteral("2".to_string()),
+				Token::NumberLiteral(2),
 				Token::End,
 			]
 		);

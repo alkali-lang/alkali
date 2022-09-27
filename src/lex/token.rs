@@ -11,17 +11,17 @@ pub enum Token {
 	Caret,
 	Ampersand,
 	Identifier(String),
-	NumberLiteral(String),
+	NumberLiteral(u32),
 	StringLiteral(String),
 	End,
 	Semicolon,
 	LessThan,
 	GreaterThan,
 	Pipe,
-	LeftCurlyBrace,
-	RightCurlyBrace,
-	LeftParenthesis,
-	RightParenthesis,
+	LBrace,
+	RBrace,
+	LParen,
+	RParen,
 }
 
 pub struct TokenReader {
