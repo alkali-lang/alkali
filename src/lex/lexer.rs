@@ -136,4 +136,26 @@ mod tests {
 			]
 		);
 	}
+
+	#[test]
+	fn multiline() {
+		let source = "test = 1 + 2\ntest2 = 3 + 4";
+		let tokens = lex(&mut source.chars());
+		assert_eq!(
+			tokens,
+			vec![
+				Token::Identifier("test".to_string()),
+				Token::Equals,
+				Token::NumberLiteral(1),
+				Token::Plus,
+				Token::NumberLiteral(2),
+				Token::Identifier("test2".to_string()),
+				Token::Equals,
+				Token::NumberLiteral(3),
+				Token::Plus,
+				Token::NumberLiteral(4),
+				Token::End,
+			]
+		);
+	}
 }
