@@ -1,0 +1,24 @@
+expr <- expr '+' expr
+      | expr '-' expr
+      | expr '>>' expr
+      | lambda-expr
+      | 
+
+arg-list <- '(' (ident (',' ident)* ','?)? ')'
+
+type-identifier <- ident
+
+annotated-type <- ident ':' type-identifier ('=' expr)?
+
+type-defn <- 'typedef' ident '=' '{' ('annotate-type' ','?)* '}'
+
+lambda-expr <- arg-list '=>' block
+
+ident <- [A-Za-z_0-9]+
+
+block <- '{' expr (';' expr)* ';'? '}'
+
+if-stmt <- 'if' expr block 'else' block
+         | 'if' expr block
+
+while-stmt <- 'while' expr block 

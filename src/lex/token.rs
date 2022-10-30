@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 #[derive(Debug, PartialEq)]
-pub enum Token {
+pub enum TokenKind {
 	Equals,
 	Plus,
 	Minus,
@@ -11,7 +11,7 @@ pub enum Token {
 	Caret,
 	Ampersand,
 	Identifier(String),
-	NumberLiteral(u32),
+	NumberLiteral(String),
 	StringLiteral(String),
 	End,
 	Semicolon,
@@ -22,6 +22,12 @@ pub enum Token {
 	RBrace,
 	LParen,
 	RParen,
+	Unknown,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Token {
+	pub kind: TokenKind,
 }
 
 pub struct TokenReader {
@@ -47,7 +53,7 @@ impl TokenReader {
 	}
 
 	pub fn end_of_file(&self) -> bool {
-		self.peek() == &Token::End
+		self.peek().kind == TokenKind::End
 	}
 
 	pub fn next_token(&mut self) -> &Token {

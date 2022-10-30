@@ -1,4 +1,6 @@
+mod ast;
 mod lex;
+mod parse;
 
 use lex::lex_source;
 
