@@ -1,5 +1,5 @@
-use super::Decl;
-
+use super::LetDecl;
+#[derive(Debug)]
 pub enum StmtKind {
-	Decl(Decl),
+	LetDecl(Box<LetDecl>),
 }

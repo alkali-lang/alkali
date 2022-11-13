@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenKind {
 	Equals,
 	Plus,
@@ -25,9 +25,11 @@ pub enum TokenKind {
 	Unknown,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
 	pub kind: TokenKind,
+	pub row: usize,
+	pub col: usize,
 }
 
 pub struct TokenReader {
@@ -43,11 +45,11 @@ impl TokenReader {
 		}
 	}
 
-	pub fn peek(&self) -> &Token {
-		self.tokens.get(self.position).unwrap()
+	pub fn peek(&self) -> Token {
+		self.tokens.get(self.position).cloned().unwrap()
 	}
 
-	pub fn next_tokens(&mut self, n: usize) -> &Token {
+	pub fn next_tokens(&mut self, n: usize) -> Token {
 		self.position += n;
 		self.next_token()
 	}
@@ -56,7 +58,7 @@ impl TokenReader {
 		self.peek().kind == TokenKind::End
 	}
 
-	pub fn next_token(&mut self) -> &Token {
+	pub fn next_token(&mut self) -> Token {
 		self.position += 1;
 		let token = self.peek();
 		token

@@ -1,4 +1,1 @@
-a1=400;
-foo >> bar;
-
-let test = "foo";
+let test = "bar"

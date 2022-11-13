@@ -1,109 +1,141 @@
-use std::fs::read_to_string;
-
-use super::{token, Token, TokenKind};
-
-pub fn lex_source(source: &str) -> token::TokenReader {
-	let src = read_to_string(source).expect("test");
-
-	let tokens = Lexer::new(src.as_str()).vectorize();
-	token::TokenReader::new(tokens)
-}
+use super::{Token, TokenKind};
 
 pub struct Lexer {
 	src: Vec<char>,
 	pub is_eof: bool,
 	pub index: usize,
-	pub start: bool,
+	pub col: usize,
+	pub row: usize,
+	pub token: Option<Token>,
 }
 
 impl Lexer {
 	pub fn new(src: &str) -> Lexer {
-		Lexer {
+		let mut lexer = Lexer {
 			src: src.chars().collect(),
 			is_eof: false,
 			index: 0,
-			start: true,
-		}
-	}
+			col: 1,
+			row: 1,
+			token: None,
+		};
 
-	fn eat_trivia(&mut self) {
-		for ch in self.src.clone() {
-			match ch {
-				' ' | '\t' | '\r' => {
-					self.next_char();
-				}
-				_ => (),
-			};
-		}
+		lexer.next_token();
+
+		lexer
 	}
 
 	pub fn vectorize(&mut self) -> Vec<Token> {
 		let mut vec = Vec::new();
-		while self.index < self.src.len() {
-			vec.push(self.next_token());
+
+		while self.peek_token().kind != TokenKind::End {
+			let token = self.peek_token();
+			vec.push(token);
+			self.next_token();
 		}
 
 		vec
 	}
 
 	pub fn peek_char(&self) -> Option<&char> {
-		self.src.get(self.index + 1)
+		self.src.get(self.index)
 	}
 
-	fn next_char(&mut self) -> char {
-		self.index += 1;
-
-		let char: Option<&char> = self.src.get(self.index);
-
-		if let None = char {
-			return '\0';
-		}
-
-		let char = char.unwrap();
-
-		if char == &'\n' {
-			return self.next_char();
-		}
-
-		char.clone()
+	pub fn peek_token(&self) -> Token {
+		self.token.clone().unwrap()
 	}
 
-	pub fn next_token(&mut self) -> Token {
-		if self.src.get(self.index).is_none() {
-			return Token {
-				kind: TokenKind::End,
-			};
-		}
+	pub fn lex_number(&mut self) -> Token {
+		let mut word = String::new();
+		let temp_col = self.col;
 
-		if let None = self.peek_char() {
-			self.index += 1;
-			return Token {
-				kind: TokenKind::End,
-			};
-		}
-
-		loop {
-			match self.peek_char() {
-				Some(&ch) => {
-					if ch == ' ' || ch == '\t' || ch == '\r' {
-						self.next_char();
-					} else {
-						break;
-					}
-				}
-				None => break,
+		while self.peek_char().is_some() && self.peek_char().unwrap().is_numeric() {
+			if self.is_eof() {
+				return Token {
+					row: self.row,
+					col: self.col,
+					kind: TokenKind::End,
+				};
 			}
+
+			word.push(*self.peek_char().unwrap());
+			self.advance();
 		}
 
-		let char = match self.start {
-			true => {
-				self.start = false;
-				self.src.get(0).unwrap().clone()
-			}
-			false => self.next_char().clone(),
+		let token = Token {
+			row: self.row,
+			col: temp_col,
+			kind: TokenKind::NumberLiteral(word),
 		};
 
-		let kind = match char {
+		self.token = Some(token.clone());
+		token
+	}
+
+	pub fn lex_ident(&mut self) -> Token {
+		let mut word = String::new();
+
+		let tmp_col = self.col;
+
+		while self.peek_char().is_some() && self.peek_char().unwrap().is_alphabetic() {
+			if self.is_eof() {
+				return Token {
+					row: self.row,
+					col: self.col,
+					kind: TokenKind::End,
+				};
+			}
+
+			word.push(*self.peek_char().unwrap());
+			self.advance();
+		}
+
+		let token = Token {
+			row: self.row,
+			col: tmp_col,
+			kind: TokenKind::Identifier(word),
+		};
+
+		self.token = Some(token.clone());
+		token
+	}
+
+	pub fn lex_str(&mut self) -> Token {
+		let mut word = String::new();
+		let tmp_col = self.col;
+
+		while self.peek_char().is_some() && self.peek_char().unwrap() != &'"' {
+			word.push(*self.peek_char().unwrap());
+			self.advance();
+		}
+
+		let token = Token {
+			kind: TokenKind::StringLiteral(word),
+			row: self.row,
+			col: tmp_col,
+		};
+
+		self.token = Some(token.clone());
+		token
+	}
+
+	pub fn is_eof(&self) -> bool {
+		self.index >= self.src.len()
+	}
+
+	pub fn advance(&mut self) {
+		if self.peek_char() == Some(&'\n') {
+			self.row += 1;
+			self.col = 1;
+		} else {
+			self.col += 1;
+		}
+
+		self.index += 1;
+	}
+
+	pub fn lex_symbol(&mut self) -> Token {
+		let kind = match self.peek_char().unwrap() {
 			'=' => TokenKind::Equals,
 			'+' => TokenKind::Plus,
 			'-' => TokenKind::Minus,
@@ -117,64 +149,66 @@ impl Lexer {
 			'}' => TokenKind::RBrace,
 			'(' => TokenKind::LParen,
 			')' => TokenKind::RParen,
-			'"' => {
-				let mut char = self.next_char();
-				let mut string = String::new();
-				while char.is_alphanumeric() {
-					string += &char.to_string();
-					char = self.next_char();
-				}
-
-				TokenKind::StringLiteral(string)
-			}
-
-			pipe if pipe == '>' && self.peek_char() == Some(&'>') => {
-				self.next_char();
-				TokenKind::Pipe
-			}
 			'<' => TokenKind::LessThan,
-			'>' => TokenKind::GreaterThan,
-			alpha if alpha.is_alphabetic() => {
-				let mut string = String::new();
-				string += &alpha.to_string();
-
-				loop {
-					let char = self.peek_char();
-					if let Some(&ch) = char {
-						if ch.is_alphanumeric() {
-							string += &ch.to_string();
-							self.next_char();
-						} else {
-							break;
-						}
-					} else {
-						break;
-					}
-				}
-
-				TokenKind::Identifier(string)
-			}
-			num if num.is_numeric() => {
-				let mut char = num;
-				let mut number = String::new();
-
-				loop {
-					number += &char.to_string();
-					let peeked_char = &self.peek_char().cloned();
-
-					if !(peeked_char.is_some() && peeked_char.unwrap().is_numeric()) {
-						break;
-					}
-
-					char = self.next_char();
-				}
-
-				TokenKind::NumberLiteral(number)
-			}
-			_ => TokenKind::Unknown,
+			_ => todo!(),
 		};
 
-		Token { kind }
+		let token = Token {
+			kind,
+			row: self.row,
+			col: self.col,
+		};
+
+		self.advance();
+
+		self.token = Some(token.clone());
+		token
+	}
+
+	pub fn next_token(&mut self) {
+		while self.peek_char().is_some()
+			&& self.peek_char().unwrap().is_whitespace()
+			&& !self.is_eof()
+		{
+			self.advance();
+		}
+
+		if self.is_eof() {
+			self.token = Some(Token {
+				kind: TokenKind::End,
+				row: self.row,
+				col: self.col,
+			});
+			return;
+		}
+
+		self.token = match self.peek_char().unwrap() {
+			'"' => Some(self.lex_str()),
+			'>' => {
+				let tmp_col = self.col;
+				self.advance();
+
+				if self.peek_char() == Some(&'>') {
+					println!("peeked {:?}", self.peek_char());
+					self.advance();
+					self.token = Some(Token {
+						row: self.row,
+						col: tmp_col,
+						kind: TokenKind::Pipe,
+					});
+					return;
+				}
+
+				Some(Token {
+					row: self.row,
+					col: tmp_col,
+					kind: TokenKind::GreaterThan,
+				})
+			}
+			alpha if alpha.is_alphabetic() => Some(self.lex_ident()),
+			num if num.is_numeric() => Some(self.lex_number()),
+			_ => Some(self.lex_symbol()),
+		};
 	}
 }
 
@@ -191,22 +225,29 @@ mod tests {
 			vec![
 				Token {
 					kind: TokenKind::Identifier("test".to_string()),
+					row: 1,
+					col: 1
 				},
 				Token {
 					kind: TokenKind::Equals,
+					row: 1,
+					col: 6
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("1".to_string()),
+					row: 1,
+					col: 8
 				},
 				Token {
 					kind: TokenKind::Plus,
+					row: 1,
+					col: 10
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("278".to_string()),
+					row: 1,
+					col: 12
 				},
-				Token {
-					kind: TokenKind::End,
-				}
 			]
 		);
 	}
@@ -220,31 +261,44 @@ mod tests {
 			vec![
 				Token {
 					kind: TokenKind::Identifier("test".to_string()),
+					row: 1,
+					col: 1
 				},
 				Token {
 					kind: TokenKind::Equals,
+					row: 1,
+					col: 6
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("1".to_string()),
+					row: 1,
+					col: 8
 				},
 				Token {
 					kind: TokenKind::Plus,
+					row: 1,
+					col: 10
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("278".to_string()),
+					row: 1,
+					col: 12
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("2".to_string()),
+					row: 2,
+					col: 1
 				},
 				Token {
 					kind: TokenKind::Plus,
+					row: 2,
+					col: 3
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("3".to_string()),
+					row: 2,
+					col: 5
 				},
-				Token {
-					kind: TokenKind::End,
-				}
 			]
 		);
 	}
@@ -258,34 +312,49 @@ mod tests {
 			vec![
 				Token {
 					kind: TokenKind::Identifier("test".to_string()),
+					row: 1,
+					col: 1
 				},
 				Token {
 					kind: TokenKind::Equals,
+					row: 1,
+					col: 6
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("1".to_string()),
+					row: 1,
+					col: 8
 				},
 				Token {
 					kind: TokenKind::Plus,
+					row: 1,
+					col: 10
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("278".to_string()),
+					row: 1,
+					col: 12
 				},
 				Token {
 					kind: TokenKind::Pipe,
+					row: 1,
+					col: 16
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("2".to_string()),
+					row: 1,
+					col: 19
 				},
 				Token {
 					kind: TokenKind::Plus,
+					row: 1,
+					col: 21
 				},
 				Token {
 					kind: TokenKind::NumberLiteral("3".to_string()),
+					row: 1,
+					col: 23
 				},
-				Token {
-					kind: TokenKind::End,
-				}
 			]
 		);
 	}
