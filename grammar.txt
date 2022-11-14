@@ -16,7 +16,7 @@ lambda-expr <- arg-list '=>' block
 
 ident <- [A-Za-z_0-9]+
 
-block <- '{' expr (';' expr)* ';'? '}'
+block <- '{' stmt (';' stmt)* ';'? '}'
 
 if-stmt <- 'if' expr block 'else' block
          | 'if' expr block

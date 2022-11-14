@@ -45,8 +45,6 @@ pub fn parse(src: String, file: Option<bool>) -> Result<SourceFile, Box<dyn Erro
 		if lexer.peek_token().kind == TokenKind::End {
 			break;
 		}
-
-		// lexer.next();
 	}
 
 	Ok(root)
@@ -55,7 +53,9 @@ pub fn parse(src: String, file: Option<bool>) -> Result<SourceFile, Box<dyn Erro
 pub fn parse_term(lexer: &mut Lexer) -> Result<Expr, Box<dyn Error>> {
 	let mut expr = parse_factor(lexer)?;
 
-	while lexer.peek_token().kind == TokenKind::Plus || lexer.peek_token().kind == TokenKind::Minus
+	while lexer.peek_token().kind == TokenKind::Plus
+		|| lexer.peek_token().kind == TokenKind::Minus
+		|| lexer.peek_token().kind == TokenKind::Pipe
 	{
 		let token = lexer.peek_token();
 
@@ -72,6 +72,13 @@ pub fn parse_term(lexer: &mut Lexer) -> Result<Expr, Box<dyn Error>> {
 				let right = parse_factor(lexer)?;
 				expr = Expr {
 					kind: ExprKind::Binary(BinaryOp::Subtract, Box::new(expr), Box::new(right)),
+				};
+			}
+			TokenKind::Pipe => {
+				lexer.next()?;
+				let right = parse_factor(lexer)?;
+				expr = Expr {
+					kind: ExprKind::Binary(BinaryOp::Pipe, Box::new(expr), Box::new(right)),
 				};
 			}
 			_ => todo!(),

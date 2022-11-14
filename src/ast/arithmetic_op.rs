@@ -4,4 +4,5 @@ pub enum BinaryOp {
 	Subtract,
 	Multiply,
 	Divide,
+	Pipe,
 }
