@@ -3,5 +3,6 @@ mod lex;
 mod parse;
 
 fn main() {
-	parse::parse("input.txt".to_string());
+	let ast = parse::parse("input.txt".to_string(), None);
+	println!("{:#?}", ast);
 }

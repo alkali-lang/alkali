@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct TypedefField {
 	pub name: String,
 	pub type_name: Option<String>,

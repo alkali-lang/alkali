@@ -1,7 +1,7 @@
 mod arithmetic_op;
 mod block;
 mod expr;
-mod exprKind;
+mod expr_kind;
 mod field;
 mod let_decl;
 mod num_lit;
@@ -13,8 +13,7 @@ mod stmt_kind;
 pub use arithmetic_op::*;
 pub use block::*;
 pub use expr::*;
-pub use exprKind::*;
-pub use exprKind::*;
+pub use expr_kind::*;
 pub use field::*;
 pub use let_decl::*;
 pub use num_lit::*;

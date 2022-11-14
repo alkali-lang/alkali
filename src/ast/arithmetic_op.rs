@@ -1,6 +1,7 @@
-#[derive(Debug)]
-pub enum ArithmeticOp {
-	Plus,
-	Minus,
-	Star,
+#[derive(Debug, PartialEq, Eq)]
+pub enum BinaryOp {
+	Add,
+	Subtract,
+	Multiply,
+	Divide,
 }

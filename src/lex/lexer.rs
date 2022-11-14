@@ -6,10 +6,11 @@ pub struct Lexer {
 	pub index: usize,
 	pub col: usize,
 	pub row: usize,
-	pub token: Option<Token>,
+	token: Option<Token>,
 }
 
 impl Lexer {
+	/// Creates a new `Lexer` from given an input string.
 	pub fn new(src: &str) -> Lexer {
 		let mut lexer = Lexer {
 			src: src.chars().collect(),
@@ -20,32 +21,22 @@ impl Lexer {
 			token: None,
 		};
 
-		lexer.next_token();
+		lexer.next();
 
 		lexer
 	}
 
-	pub fn vectorize(&mut self) -> Vec<Token> {
-		let mut vec = Vec::new();
-
-		while self.peek_token().kind != TokenKind::End {
-			let token = self.peek_token();
-			vec.push(token);
-			self.next_token();
-		}
-
-		vec
-	}
-
+	/// Returns the next char in the input stream
 	pub fn peek_char(&self) -> Option<&char> {
 		self.src.get(self.index)
 	}
 
+	// Returns the next token in the input stream
 	pub fn peek_token(&self) -> Token {
 		self.token.clone().unwrap()
 	}
 
-	pub fn lex_number(&mut self) -> Token {
+	fn lex_number(&mut self) -> Token {
 		let mut word = String::new();
 		let temp_col = self.col;
 
@@ -72,7 +63,7 @@ impl Lexer {
 		token
 	}
 
-	pub fn lex_ident(&mut self) -> Token {
+	fn lex_ident(&mut self) -> Token {
 		let mut word = String::new();
 
 		let tmp_col = self.col;
@@ -100,7 +91,7 @@ impl Lexer {
 		token
 	}
 
-	pub fn lex_str(&mut self) -> Token {
+	fn lex_str(&mut self) -> Token {
 		let mut word = String::new();
 		let tmp_col = self.col;
 
@@ -108,6 +99,8 @@ impl Lexer {
 			word.push(*self.peek_char().unwrap());
 			self.advance();
 		}
+
+		self.advance();
 
 		let token = Token {
 			kind: TokenKind::StringLiteral(word),
@@ -119,11 +112,11 @@ impl Lexer {
 		token
 	}
 
-	pub fn is_eof(&self) -> bool {
+	fn is_eof(&self) -> bool {
 		self.index >= self.src.len()
 	}
 
-	pub fn advance(&mut self) {
+	fn advance(&mut self) {
 		if self.peek_char() == Some(&'\n') {
 			self.row += 1;
 			self.col = 1;
@@ -134,7 +127,7 @@ impl Lexer {
 		self.index += 1;
 	}
 
-	pub fn lex_symbol(&mut self) -> Token {
+	fn lex_symbol(&mut self) -> Token {
 		let kind = match self.peek_char().unwrap() {
 			'=' => TokenKind::Equals,
 			'+' => TokenKind::Plus,
@@ -165,7 +158,8 @@ impl Lexer {
 		token
 	}
 
-	pub fn next_token(&mut self) {
+	/// Advances the lexer to the next token
+	pub fn next(&mut self) {
 		while self.peek_char().is_some()
 			&& self.peek_char().unwrap().is_whitespace()
 			&& !self.is_eof()
@@ -183,13 +177,15 @@ impl Lexer {
 		}
 
 		self.token = match self.peek_char().unwrap() {
-			'"' => Some(self.lex_str()),
+			'"' => {
+				self.advance();
+				Some(self.lex_str())
+			}
 			'>' => {
 				let tmp_col = self.col;
 				self.advance();
 
 				if self.peek_char() == Some(&'>') {
-					println!("peeked {:?}", self.peek_char());
 					self.advance();
 					self.token = Some(Token {
 						row: self.row,
@@ -216,10 +212,22 @@ impl Lexer {
 mod tests {
 	use super::*;
 
+	fn vectorize(lexer: &mut Lexer) -> Vec<Token> {
+		let mut vec = Vec::new();
+
+		while lexer.peek_token().kind != TokenKind::End {
+			let token = lexer.peek_token();
+			vec.push(token);
+			lexer.next();
+		}
+
+		vec
+	}
+
 	#[test]
 	fn test_basic() {
 		let source = "test = 1 + 278";
-		let tokens = Lexer::new(source).vectorize();
+		let tokens = vectorize(&mut Lexer::new(source));
 		assert_eq!(
 			tokens,
 			vec![
@@ -253,9 +261,76 @@ mod tests {
 	}
 
 	#[test]
+	fn lex_str() {
+		let source = "let x = \"hello world\"";
+		let tokens = vectorize(&mut Lexer::new(source));
+		assert_eq!(
+			tokens,
+			vec![
+				Token {
+					kind: TokenKind::Identifier("let".to_string()),
+					row: 1,
+					col: 1
+				},
+				Token {
+					kind: TokenKind::Identifier("x".to_string()),
+					row: 1,
+					col: 5
+				},
+				Token {
+					kind: TokenKind::Equals,
+					row: 1,
+					col: 7
+				},
+				Token {
+					kind: TokenKind::StringLiteral("hello world".to_string()),
+					row: 1,
+					col: 9
+				},
+			]
+		);
+	}
+
+	#[test]
+	fn test_greater_than() {
+		let source = "test = 1 > 278";
+		let tokens = vectorize(&mut Lexer::new(source));
+		assert_eq!(
+			tokens,
+			vec![
+				Token {
+					kind: TokenKind::Identifier("test".to_string()),
+					row: 1,
+					col: 1
+				},
+				Token {
+					kind: TokenKind::Equals,
+					row: 1,
+					col: 6
+				},
+				Token {
+					kind: TokenKind::NumberLiteral("1".to_string()),
+					row: 1,
+					col: 8
+				},
+				Token {
+					kind: TokenKind::GreaterThan,
+					row: 1,
+					col: 10
+				},
+				Token {
+					kind: TokenKind::NumberLiteral("278".to_string()),
+					row: 1,
+					col: 12
+				},
+			]
+		);
+	}
+
+	#[test]
 	fn test_multiline() {
 		let source = "test = 1 + 278\n2 + 3";
-		let tokens = Lexer::new(source).vectorize();
+		let tokens = vectorize(&mut Lexer::new(source));
 		assert_eq!(
 			tokens,
 			vec![
@@ -306,7 +381,7 @@ mod tests {
 	#[test]
 	fn pipe_test() {
 		let source = "test = 1 + 278 >> 2 + 3";
-		let tokens = Lexer::new(source).vectorize();
+		let tokens = vectorize(&mut Lexer::new(source));
 		assert_eq!(
 			tokens,
 			vec![

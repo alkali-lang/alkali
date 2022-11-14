@@ -1,5 +1,5 @@
 use super::LetDecl;
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum StmtKind {
 	LetDecl(Box<LetDecl>),
 }

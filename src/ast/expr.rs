@@ -1,8 +1,6 @@
-use crate::lex::Token;
-
 use super::ExprKind;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Expr {
 	pub kind: ExprKind,
 }
