@@ -23,7 +23,7 @@ impl Lexer {
 			token: None,
 		};
 
-		lexer.next();
+		lexer.next().unwrap();
 
 		lexer
 	}
@@ -223,7 +223,7 @@ mod tests {
 		while lexer.peek_token().kind != TokenKind::End {
 			let token = lexer.peek_token();
 			vec.push(token);
-			lexer.next();
+			lexer.next().unwrap();
 		}
 
 		vec
@@ -290,7 +290,7 @@ mod tests {
 				Token {
 					kind: TokenKind::StringLiteral("hello world".to_string()),
 					row: 1,
-					col: 9
+					col: 10
 				},
 			]
 		);
