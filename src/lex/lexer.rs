@@ -1,3 +1,5 @@
+use std::fmt::Error;
+
 use super::{Token, TokenKind};
 
 pub struct Lexer {
@@ -36,17 +38,17 @@ impl Lexer {
 		self.token.clone().unwrap()
 	}
 
-	fn lex_number(&mut self) -> Token {
+	fn lex_number(&mut self) -> Result<Token, Error> {
 		let mut word = String::new();
 		let temp_col = self.col;
 
 		while self.peek_char().is_some() && self.peek_char().unwrap().is_numeric() {
 			if self.is_eof() {
-				return Token {
+				return Ok(Token {
 					row: self.row,
 					col: self.col,
 					kind: TokenKind::End,
-				};
+				});
 			}
 
 			word.push(*self.peek_char().unwrap());
@@ -60,21 +62,21 @@ impl Lexer {
 		};
 
 		self.token = Some(token.clone());
-		token
+		Ok(token)
 	}
 
-	fn lex_ident(&mut self) -> Token {
+	fn lex_ident(&mut self) -> Result<Token, Error> {
 		let mut word = String::new();
 
 		let tmp_col = self.col;
 
 		while self.peek_char().is_some() && self.peek_char().unwrap().is_alphabetic() {
 			if self.is_eof() {
-				return Token {
+				return Ok(Token {
 					row: self.row,
 					col: self.col,
 					kind: TokenKind::End,
-				};
+				});
 			}
 
 			word.push(*self.peek_char().unwrap());
@@ -88,7 +90,7 @@ impl Lexer {
 		};
 
 		self.token = Some(token.clone());
-		token
+		Ok(token)
 	}
 
 	fn lex_str(&mut self) -> Token {
@@ -159,7 +161,7 @@ impl Lexer {
 	}
 
 	/// Advances the lexer to the next token
-	pub fn next(&mut self) {
+	pub fn next(&mut self) -> Result<(), Error> {
 		while self.peek_char().is_some()
 			&& self.peek_char().unwrap().is_whitespace()
 			&& !self.is_eof()
@@ -173,13 +175,13 @@ impl Lexer {
 				row: self.row,
 				col: self.col,
 			});
-			return;
+			return Ok(());
 		}
 
-		self.token = match self.peek_char().unwrap() {
+		let res = match self.peek_char().unwrap() {
 			'"' => {
 				self.advance();
-				Some(self.lex_str())
+				Ok(self.lex_str())
 			}
 			'>' => {
 				let tmp_col = self.col;
@@ -192,19 +194,22 @@ impl Lexer {
 						col: tmp_col,
 						kind: TokenKind::Pipe,
 					});
-					return;
+					return Ok(());
 				}
 
-				Some(Token {
+				Ok(Token {
 					row: self.row,
 					col: tmp_col,
 					kind: TokenKind::GreaterThan,
 				})
 			}
-			alpha if alpha.is_alphabetic() => Some(self.lex_ident()),
-			num if num.is_numeric() => Some(self.lex_number()),
-			_ => Some(self.lex_symbol()),
-		};
+			alpha if alpha.is_alphabetic() => self.lex_ident(),
+			num if num.is_numeric() => self.lex_number(),
+			_ => Ok(self.lex_symbol()),
+		}?;
+
+		self.token = Some(res);
+		Ok(())
 	}
 }
 
