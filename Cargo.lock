@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
  "itertools",
  "utf8-chars",
+ "utf8-read",
 ]
 
 [[package]]
@@ -39,3 +40,9 @@ checksum = "6ef0a4014b773d93a0fe487750589dc5c5b7d714457454e7e62f54d131c278af"
 dependencies = [
  "arrayvec",
 ]
+
+[[package]]
+name = "utf8-read"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb566ac06e11c3f13872ebcb0e72ea5f97f0f65a16f45048d0adea21edc28018"

@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 itertools = "0.10.5"
 utf8-chars = "2.0.2"
+utf8-read = "0.4.0"

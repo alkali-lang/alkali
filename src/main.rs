@@ -1,12 +1,13 @@
-use std::error::Error;
+use std::fs::File;
 
 mod ast;
 mod lex;
 mod parse;
+mod shared;
 
-fn main() -> Result<(), Box<dyn Error>> {
-	let ast = parse::parse("input.txt".to_string(), None)?;
+fn main() -> shared::Result<()> {
+	let mut file = File::open("input.txt").unwrap();
+	let lexer = lex::Lexer::new(&mut file);
 
-	println!("{:#?}", ast);
 	Ok(())
 }

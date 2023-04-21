@@ -5,3 +5,5 @@ impl Display for InvalidChar {
 		write!(f, "Invalid character")
 	}
 }
+
+impl Error for InvalidChar {}
